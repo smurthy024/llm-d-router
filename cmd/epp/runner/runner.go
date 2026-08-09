@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	dprank "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/requestcontrol/dprank"
 	"net/http"
 	"os"
 	"regexp"
@@ -715,6 +716,9 @@ func (r *Runner) registerInTreePlugins() {
 	fwkplugin.Register(concurrency.ConcurrencyDetectorType, fwkplugin.StabilityBeta, concurrency.ConcurrencyDetectorFactory)
 	fwkplugin.Register(utilization.UtilizationDetectorType, fwkplugin.StabilityBeta, utilization.UtilizationDetectorFactory)
 
+	// dp-rank-router: prefix-affinity routing across a single pod's DP ranks.
+	// Alpha — requires EPP --allow-experimental-plugins=true when configured.
+	fwkplugin.Register(dprank.DPRankPluginType, fwkplugin.StabilityAlpha, dprank.Factory)
 	// register discovery plugins
 	// Beta
 	fwkplugin.Register(discoveryfile.PluginType, fwkplugin.StabilityBeta, discoveryfile.Factory)
