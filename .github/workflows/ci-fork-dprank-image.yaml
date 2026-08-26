@@ -8,7 +8,12 @@
 #   1. Repo Settings → Actions → General → Workflow permissions → Read and write
 #   2. Package ghcr.io/smurthy024/llm-d-router → Package settings →
 #      Manage Actions access → smurthy024/llm-d-router (Write)
-#   3. Repo secret GHCR_WRITE_TOKEN = PAT with write:packages (fallback below)
+#      Manage Actions access → smurthy024/llm-d-router (Write)
+#   3. Repo secret GHCR_WRITE_TOKEN = github.com classic PAT with write:packages
+#
+# Image repo is llm-d-router-epp (not llm-d-router) so GHA can create/link the
+# package on first push. The older llm-d-router package was pushed locally and
+# blocks GITHUB_TOKEN writes until manually linked.
 #
 # Manual run:
 #   gh workflow run ci-fork-dprank-image.yaml -R smurthy024/llm-d-router \
@@ -22,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Image tag (pushed to ghcr.io/smurthy024/llm-d-router)
+        description: Image tag (pushed to ghcr.io/smurthy024/llm-d-router-epp)
         required: true
         default: dprank-88c0edd
       platform:
@@ -83,8 +88,8 @@ jobs:
           provenance: false
           sbom: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/llm-d-router:${{ steps.meta.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/llm-d-router:dprank-latest
+            ghcr.io/${{ github.repository_owner }}/llm-d-router-epp:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/llm-d-router-epp:dprank-latest
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             BUILD_REF=${{ steps.meta.outputs.tag }}
@@ -95,6 +100,6 @@ jobs:
       - name: Image summary
         run: |
           echo "### EPP image" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`ghcr.io/${{ github.repository_owner }}/llm-d-router:${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`ghcr.io/${{ github.repository_owner }}/llm-d-router-epp:${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- platform: \`${{ steps.meta.outputs.platform }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
