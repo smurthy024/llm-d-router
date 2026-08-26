@@ -4,6 +4,12 @@
 # EPP is a pure Go binary — one linux/amd64 image serves both ROCm and NVIDIA
 # decode clusters. GPU vendor is determined by the vLLM decode image, not EPP.
 #
+# GHCR push requires ONE of:
+#   1. Repo Settings → Actions → General → Workflow permissions → Read and write
+#   2. Package ghcr.io/smurthy024/llm-d-router → Package settings →
+#      Manage Actions access → smurthy024/llm-d-router (Write)
+#   3. Repo secret GHCR_WRITE_TOKEN = PAT with write:packages (fallback below)
+#
 # Manual run:
 #   gh workflow run ci-fork-dprank-image.yaml -R smurthy024/llm-d-router \
 #     -f tag=dprank-88c0edd
@@ -27,10 +33,17 @@ on:
 permissions:
   contents: read
   packages: write
+  attestations: write
+  id-token: write
 
 jobs:
   build-epp:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -47,12 +60,15 @@ jobs:
             echo "platform=linux/amd64" >> "$GITHUB_OUTPUT"
           fi
 
+      # Uses GHCR_WRITE_TOKEN (PAT with write:packages) when set; else GITHUB_TOKEN.
+      # If push fails with write_package, add the PAT secret OR link the package:
+      # ghcr.io → llm-d-router package → Manage Actions access → this repo (Write)
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_WRITE_TOKEN || github.token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -64,9 +80,11 @@ jobs:
           file: Dockerfile.epp
           push: true
           platforms: ${{ steps.meta.outputs.platform }}
+          provenance: false
+          sbom: false
           tags: |
-            ghcr.io/smurthy024/llm-d-router:${{ steps.meta.outputs.tag }}
-            ghcr.io/smurthy024/llm-d-router:dprank-latest
+            ghcr.io/${{ github.repository_owner }}/llm-d-router:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/llm-d-router:dprank-latest
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             BUILD_REF=${{ steps.meta.outputs.tag }}
@@ -77,6 +95,6 @@ jobs:
       - name: Image summary
         run: |
           echo "### EPP image" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`ghcr.io/smurthy024/llm-d-router:${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`ghcr.io/${{ github.repository_owner }}/llm-d-router:${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- platform: \`${{ steps.meta.outputs.platform }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
